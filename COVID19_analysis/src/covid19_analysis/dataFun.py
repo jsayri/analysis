@@ -9,8 +9,67 @@ __author__ = "J SAYRITUPAC"
 __copyright__ = "J SAYRITUPAC"
 __license__ = "mit"
 
+# Provide a timeseries for a define country from JHU dataset
+def get_timeseries_from_JHU(df_jhu, country_name, mainland = True):
+    '''Provide a timeseries for a define country from JHU dataset. 
+        df_jhu:         <dataframe> Dataset read from JHU repository
+        country_name:   <string> Name of the country within the JHU country list
+        mainland:       <boolean> Allows to choose between have only mainland data or all places data, True by default
+        '''
+    if mainland:
+        # check if exist more than one Province/Region
+        if df_jhu['Province/State'].loc[df_jhu['Country/Region'] == country_name].size > 1:
+            print('Warning: %s has more than one Province/State, only mainland was taken' %(country_name))
+            df_out = df_jhu.loc[(df_jhu['Country/Region'] == country_name) & (df_jhu['Province/State'] == country_name)]
+        else:
+            df_out = df_jhu.loc[df_jhu['Country/Region'] == country_name]
+    else:
+        df_tmp = df_jhu.loc[df_jhu['Country/Region'] == country_name]
+        temp_array = df_tmp.sum(axis=0, numeric_only=True)
+        df_out = df_tmp.head(1).copy()
+        for c in temp_array.index:
+            if c != 'Lat' and c != 'Long':
+                df_out[c] = temp_array[c]
+        df_out['Province/State'] = country_name
+    
+    # get timeseries
+    ts_country = pd.Series(data=df_out.iloc[0][4:].values, index=pd.to_datetime(df_out.columns[4:]), dtype=int)
+    return ts_country
+
+# Allow to select one country from the JHU dataset (merger all regions or just mainland)
+def select_country(df_all, country_name, just_mainland = True):
+    '''Provide a data-frame with the data from the selected country. Note: variable  'just_mainland' equal false,  will sum all Province/States'''
+    if just_mainland:
+        # check if exist more than one Province/Region
+        if df_all['Province/State'].loc[df_all['Country/Region'] == country_name].size > 1:
+            print('Warning: %s has more than one Province/State, only mainland was took on the output dataframe' %(country_name))
+            df_out = df_all.loc[(df_all['Country/Region'] == country_name) & (df_all['Province/State'] == country_name)]
+        else:
+            df_out = df_all.loc[df_all['Country/Region'] == country_name]
+        return df_out
+    else:
+        df_tmp = df_all.loc[df_all['Country/Region'] == country_name]
+        temp_array = df_tmp.sum(axis=0, numeric_only=True)
+        df_out = df_tmp.head(1).copy()
+        for c in temp_array.index:
+            if c != 'Lat' and c != 'Long':
+                df_out[c] = temp_array[c]
+        df_out['Province/State'] = country_name
+        return df_out
+
+# Define a division for two vectors (array dim 1) when the divisor has zero
+def safe_div(x,y):
+    ''' Calculate a division between two vector on which the divisor have a zero value. The final result will have zero as well'''
+    isZero = (y == 0)
+    y2 = np.array(y)
+    y2[isZero] = 1
+    res = x / y2
+    res[isZero] = 0
+    return res
+
+# Ancient function. Define a new dataframe from JHU dataframe by reshaping columns by rows and excluding some variables (lat & long)
 def recreate_df(raw_df):
-    '''Create a dataframe based on the DF provide by the JHU repository'''
+    '''OLD FUNCTION: Create a dataframe based on the DF provide by the JHU repository'''
     # identify columns and datetime data
     col_names = raw_df.columns
     date_data = pd.to_datetime(raw_df.columns[4:])
@@ -27,13 +86,3 @@ def recreate_df(raw_df):
         data_tmp = np.array(raw_df.iloc[cidx][4:], dtype=int)
         new_df[c] = data_tmp
     return new_df
-
-
-def safe_div(x,y):
-    ''' Calculate a division between two vector on which the divisor have a zero value. The final result will have zero as well'''
-    isZero = (y == 0)
-    y2 = np.array(y)
-    y2[isZero] = 1
-    res = x / y2
-    res[isZero] = 0
-    return res
