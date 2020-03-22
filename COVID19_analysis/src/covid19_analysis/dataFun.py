@@ -16,7 +16,15 @@ def get_timeseries_from_JHU(df_jhu, country_name, mainland = True):
         country_name:   <string> Name of the country within the JHU country list
         mainland:       <boolean> Allows to choose between have only mainland data or all places data, True by default
         '''
-    if mainland:
+    if country_name is 'all':
+        # Calculate the sum of all cases
+        temp_array = df_jhu.sum(axis=0, numeric_only=True)
+        df_out = df_jhu.head(1).copy()
+        for c in temp_array.index:
+            if c != 'Lat' and c != 'Long':
+                df_out[c] = temp_array[c]
+
+    elif mainland:
         # check if exist more than one Province/Region
         if df_jhu['Province/State'].loc[df_jhu['Country/Region'] == country_name].size > 1:
             print('Warning: %s has more than one Province/State, only mainland was taken' %(country_name))
@@ -31,9 +39,9 @@ def get_timeseries_from_JHU(df_jhu, country_name, mainland = True):
             if c != 'Lat' and c != 'Long':
                 df_out[c] = temp_array[c]
         df_out['Province/State'] = country_name
-    
+
     # get timeseries
-    ts_country = pd.Series(data=df_out.iloc[0][4:].values, index=pd.to_datetime(df_out.columns[4:]), dtype=int)
+    ts_country = pd.Series(data=df_out.iloc[0][4:].fillna(0).values, index=pd.to_datetime(df_out.columns[4:]), dtype=int)
     return ts_country
 
 # Allow to select one country from the JHU dataset (merger all regions or just mainland)

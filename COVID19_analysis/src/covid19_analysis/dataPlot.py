@@ -5,12 +5,62 @@ import numpy as np
 import plotly
 import datetime
 
+# import local functions
+import covid19_analysis.dataFun as dataFun
+
+
 
 from covid19_analysis import __version__
 
 __author__ = "J SAYRITUPAC"
 __copyright__ = "J SAYRITUPAC"
 __license__ = "mit"
+
+# Generate recoveries and fatalities rates for JHU dataframe source
+def disp_country_rates_jhu(ts_case, ts_recov, ts_death, loc_name, mask=0):
+    '''Routine to display the evolution of recovery and fatalies rates compare to all cases reported by JHU datasource
+        ts_case:    <timeserie> information over time for each case
+        ts_recov:   <timeserie> information over time for each recovery
+        ts_death:   <timeserie> information over time for each fatality
+        loc_name:   <string> name of the location under study
+        mask:       <boolean> vector with period to display, default=0 all period
+
+        '''
+    # Calculate rates faces to total cases diagnosed
+    rate_recov = dataFun.safe_div(ts_recov.values, ts_case.values) *100
+    rate_death = dataFun.safe_div(ts_death.values, ts_case.values) *100   
+
+    # display rates
+    fig = plotly.subplots.make_subplots(rows=2, cols=1)
+
+    fig.add_bar(
+        row=1, col=1,
+        x = ts_case.index[mask],
+        y = rate_recov[mask],
+        name = 'Recoveries',
+        marker = dict(color = 'darkseagreen', line=dict(color='forestgreen', width=1.5)),
+    )
+    fig.update_xaxes(title_text="Time [Days]", row=1, col=1)
+    fig.update_yaxes(title_text="Percentage [%]", row=1, col=1, showgrid=True, gridwidth=.3, gridcolor='gainsboro')
+
+    fig.add_bar(
+        row=2, col=1,
+        x = ts_case.index[mask],
+        y = rate_death[mask],
+        name = 'Fatalities',
+        marker = dict(color = 'DimGray', line=dict(color='Black', width=1.5)),
+    )
+    fig.update_xaxes(title_text="Time [Days]", row=2, col=1)
+    fig.update_yaxes(title_text="Percentage [%]", row=2, col=1, showgrid=True, gridwidth=.3, gridcolor='gainsboro')
+
+    fig.update_layout(
+        title_text = 'Recovery & Fatalities rates for ' + loc_name + datetime.datetime.today().strftime(', %B %d, %Y'),
+        title_x = .5,
+        plot_bgcolor='white')
+    
+    fig.show()
+
+
 
 # Generate cumulative graph over time for JHU dataframe source
 def disp_cum_jhu(ts_case, ts_recov, ts_death, loc_name, mask=0):
@@ -68,6 +118,8 @@ def disp_cum_jhu(ts_case, ts_recov, ts_death, loc_name, mask=0):
         title_x = .5
     )
 
+    fig.update_yaxes(showgrid=True, gridwidth=.3, gridcolor='gainsboro')
+    
     fig.show()
 
 
@@ -76,7 +128,7 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU'):
     '''Display daily cases evolution for confirmed & fatalities for two different data sources. 
         df_data:    <dataframe> daily information per case
         loc_name:   <string> name of the location under study
-        pop_factor: <integer> mutiplicative factor for yaxis chart
+        df_source:  <string> select the type of dataframe source
         
         '''
 
@@ -84,7 +136,7 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU'):
         # time vector
         date_time = df_data.date
 
-        # daily cases
+        # Daily cases
         data_tmp = np.array(df_data.cas_confirmes, dtype=int)
         data_tmp[data_tmp<0] = 0
         cases_d = data_tmp[1:]-data_tmp[:data_tmp.size-1]
@@ -96,8 +148,33 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU'):
         death_d = data_tmp[1:]-data_tmp[:data_tmp.size-1]
         death_d = np.insert(death_d, 0, data_tmp[0])
 
+        # daily recov
+        recov_d = 0
+
     elif df_source == 'JHU':
-        print('not ready yet')
+        # time vector
+        date_time = df_data.index
+
+        # Daily cases
+        data_tmp = np.array(df_data.cases, dtype=int)
+        data_tmp[data_tmp<0] = 0
+        cases_d = data_tmp[1:]-data_tmp[:data_tmp.size-1]
+        cases_d = np.insert(cases_d, 0, data_tmp[0])
+
+        # Daily fatalities
+        data_tmp = np.array(df_data.death, dtype=int)
+        data_tmp[data_tmp<0] = 0
+        death_d = data_tmp[1:]-data_tmp[:data_tmp.size-1]
+        death_d = np.insert(death_d, 0, data_tmp[0])
+
+        # Daily recovery
+        data_tmp = np.array(df_data.recov, dtype=int)
+        data_tmp[data_tmp<0] = 0
+        recov_d = data_tmp[1:]-data_tmp[:data_tmp.size-1]
+        recov_d = np.insert(recov_d, 0, data_tmp[0])
+        
+    else:
+        print('Error: Not valid value for df_source')
         return
 
     # Build plot for daily variation
@@ -108,23 +185,34 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU'):
         plotly.graph_objects.Bar(
             x = date_time,
             y = cases_d,
-            marker = dict(color = 'CornflowerBlue', line = dict(color = 'darkblue', width=1.5)),
+            marker = dict(color = 'CornflowerBlue', line = dict(color = 'DarkBlue', width=1.5)),
             name = 'Cases'
     ))
 
-    # daily deaths
-    fig.add_trace(plotly.graph_objects.Bar(
-        x = date_time,
-        y = death_d,
-        marker = dict(color = 'dimgray', line = dict(color = 'black', width=1.5)),
-        name = 'Fatalities'
+    # daily fatalities
+    fig.add_trace(
+        plotly.graph_objects.Bar(
+            x = date_time,
+            y = death_d,
+            marker = dict(color = 'DimGray', line = dict(color = 'Black', width=1.5)),
+            name = 'Fatalities'
     ))
+
+    if df_source is 'JHU': # exclude SPF
+        # daily recoveries
+        fig.add_trace(
+            plotly.graph_objects.Bar(
+                x = date_time,
+                y = recov_d,
+                marker = dict(color = 'DarkSeaGreen', line = dict(color = 'ForestGreen', width=1.5)),
+                name = 'Recoveries'
+        ))
 
     fig.update_layout(
         plot_bgcolor='white', 
         #barmode = 'stack',
         xaxis_title = 'Time [Days]',
-        yaxis_title = 'Cases [Hab]',
+        yaxis_title = 'Cases',
         title = 'Daily progression in ' + loc_name + datetime.datetime.today().strftime(', %B %d, %Y'),
         title_x = .5
     )
