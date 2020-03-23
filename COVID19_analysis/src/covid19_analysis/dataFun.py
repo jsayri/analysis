@@ -2,6 +2,7 @@
 
 import pandas as pd
 import numpy as np
+import re
 
 from covid19_analysis import __version__
 
@@ -25,20 +26,38 @@ def get_timeseries_from_JHU(df_jhu, country_name, mainland = True):
                 df_out[c] = temp_array[c]
 
     elif mainland:
+        list_province = df_jhu['Province/State'].loc[df_jhu['Country/Region'] == country_name].unique()
+        
         # check if exist more than one Province/Region
-        if df_jhu['Province/State'].loc[df_jhu['Country/Region'] == country_name].size > 1:
-            print('Warning: %s has more than one Province/State, only mainland was taken' %(country_name))
-            df_out = df_jhu.loc[(df_jhu['Country/Region'] == country_name) & (df_jhu['Province/State'] == country_name)]
+        if list_province.size > 1:
+            print('Warning: %s has many Province/State' %(country_name))
+            if any(list_province == country_name):
+                print('Warning: Only mainland was taken')
+                df_out = df_jhu.loc[(df_jhu['Country/Region'] == country_name) & (df_jhu['Province/State'] == country_name)]
+            
+            else:
+                print('Warning: data for %s is the sum of all Provice/State' %(country_name))
+                # calculate aggregate data
+                df_tmp = df_jhu.loc[df_jhu['Country/Region'] == country_name]
+                if country_name == 'US': # 'US' special case
+                    just_states =  [re.search(', ', prov) == None for prov in list_province] 
+                    df_tmp = df_tmp.loc[just_states]
+                temp_array = df_tmp.sum(axis=0, numeric_only=True)
+                df_out = df_tmp.head(1).copy()
+                for c in temp_array.index:
+                    if c != 'Lat' and c != 'Long':
+                        df_out[c] = temp_array[c]
+            
         else:
             df_out = df_jhu.loc[df_jhu['Country/Region'] == country_name]
     else:
+        # calculate aggregate data
         df_tmp = df_jhu.loc[df_jhu['Country/Region'] == country_name]
         temp_array = df_tmp.sum(axis=0, numeric_only=True)
         df_out = df_tmp.head(1).copy()
         for c in temp_array.index:
             if c != 'Lat' and c != 'Long':
                 df_out[c] = temp_array[c]
-        df_out['Province/State'] = country_name
 
     # get timeseries
     ts_country = pd.Series(data=df_out.iloc[0][4:].fillna(0).values, index=pd.to_datetime(df_out.columns[4:]), dtype=int)

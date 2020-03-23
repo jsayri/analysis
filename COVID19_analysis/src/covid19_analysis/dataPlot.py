@@ -16,6 +16,58 @@ __author__ = "J SAYRITUPAC"
 __copyright__ = "J SAYRITUPAC"
 __license__ = "mit"
 
+# Countries comparison
+def disp_countries_comp(df_data, ctry_list, mask=0, plot_type='line'):
+    '''Routine to plot countries cases over time so a visual comparison is possible
+        df_data:    <dataframe> information from JHU for each case per country over time
+        ctry_list:  <list> string list with countries to compare
+        mask:       <boolean> vector with period to display, all period by default (0)
+        plot_type:  TO BE DONE LATER
+
+    '''
+    fig = plotly.graph_objects.Figure()
+
+    for country in ctry_list:
+        # get country timeseries
+        ctry_ts = dataFun.get_timeseries_from_JHU(df_data, country)
+
+        # check for time filter
+        if mask is 0:
+            mask = ctry_ts.index >= ctry_ts.index[0]
+
+        if plot_type == 'Bar':
+            fig.add_trace(
+                plotly.graph_objects.Bar(
+                    x = ctry_ts.index[mask],
+                    y = ctry_ts[mask], 
+                    name = country
+                ))
+
+        elif plot_type == 'line':
+            fig.add_trace(
+                plotly.graph_objects.Scatter(
+                    mode = 'lines+markers',
+                    x = ctry_ts.index[mask],
+                    y = ctry_ts[mask], 
+                    name = country
+                ))
+        
+    # set background and axis chart style
+    fig.update_layout(
+        xaxis_title = 'Time [Days]',
+        yaxis_title = 'Cases',
+        title = 'COVID-19 cases per country',
+        title_x = 0.5,
+        plot_bgcolor='white', 
+        yaxis_type="log"
+    )
+
+    # display horizontal grid lines
+    fig.update_yaxes(showgrid=True, gridwidth=.3, gridcolor='gainsboro')
+
+    fig.show()
+
+
 # Generate recoveries and fatalities rates for JHU dataframe source
 def disp_country_rates_jhu(ts_case, ts_recov, ts_death, loc_name, mask=0):
     '''Routine to display the evolution of recovery and fatalies rates compare to all cases reported by JHU datasource
@@ -23,9 +75,13 @@ def disp_country_rates_jhu(ts_case, ts_recov, ts_death, loc_name, mask=0):
         ts_recov:   <timeserie> information over time for each recovery
         ts_death:   <timeserie> information over time for each fatality
         loc_name:   <string> name of the location under study
-        mask:       <boolean> vector with period to display, default=0 all period
+        mask:       <boolean> vector with period to display, all period by default (0)
 
         '''
+    # Check for time filter
+    if mask is 0:
+        mask = ts_case.index >= ts_case.index[0]
+
     # Calculate rates faces to total cases diagnosed
     rate_recov = dataFun.safe_div(ts_recov.values, ts_case.values) *100
     rate_death = dataFun.safe_div(ts_death.values, ts_case.values) *100   
@@ -72,7 +128,7 @@ def disp_cum_jhu(ts_case, ts_recov, ts_death, loc_name, mask=0):
         mask:       <boolean> vector with period to display, default=0 all period
 
         '''
-    # check for time filter
+    # Check for time filter
     if mask is 0:
         mask = ts_case.index >= ts_case.index[0]
 
@@ -124,14 +180,13 @@ def disp_cum_jhu(ts_case, ts_recov, ts_death, loc_name, mask=0):
 
 
 # Generate a graph in original axis with current active cases
-def disp_daily_cases(df_data, loc_name, df_source='JHU'):
+def disp_daily_cases(df_data, loc_name, df_source='JHU', mask=0):
     '''Display daily cases evolution for confirmed & fatalities for two different data sources. 
         df_data:    <dataframe> daily information per case
         loc_name:   <string> name of the location under study
         df_source:  <string> select the type of dataframe source
         
         '''
-
     if df_source == 'SPF':
         # time vector
         date_time = df_data.date
@@ -159,23 +214,27 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU'):
         data_tmp = np.array(df_data.cases, dtype=int)
         data_tmp[data_tmp<0] = 0
         cases_d = data_tmp[1:]-data_tmp[:data_tmp.size-1]
-        cases_d = np.insert(cases_d, 0, data_tmp[0])
+        cases_d = np.insert(cases_d, 0, data_tmp[0]).clip(min=0)
 
         # Daily fatalities
         data_tmp = np.array(df_data.death, dtype=int)
         data_tmp[data_tmp<0] = 0
         death_d = data_tmp[1:]-data_tmp[:data_tmp.size-1]
-        death_d = np.insert(death_d, 0, data_tmp[0])
+        death_d = np.insert(death_d, 0, data_tmp[0]).clip(min=0)
 
         # Daily recovery
         data_tmp = np.array(df_data.recov, dtype=int)
         data_tmp[data_tmp<0] = 0
         recov_d = data_tmp[1:]-data_tmp[:data_tmp.size-1]
-        recov_d = np.insert(recov_d, 0, data_tmp[0])
+        recov_d = np.insert(recov_d, 0, data_tmp[0]).clip(min=0)
         
     else:
         print('Error: Not valid value for df_source')
         return
+
+    # Check for time filter
+    if mask is 0:
+        mask = date_time >= date_time[0]
 
     # Build plot for daily variation
     fig = plotly.graph_objects.Figure()
@@ -183,8 +242,8 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU'):
     # daily cases
     fig.add_trace(
         plotly.graph_objects.Bar(
-            x = date_time,
-            y = cases_d,
+            x = date_time[mask],
+            y = cases_d[mask],
             marker = dict(color = 'CornflowerBlue', line = dict(color = 'DarkBlue', width=1.5)),
             name = 'Cases'
     ))
@@ -192,8 +251,8 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU'):
     # daily fatalities
     fig.add_trace(
         plotly.graph_objects.Bar(
-            x = date_time,
-            y = death_d,
+            x = date_time[mask],
+            y = death_d[mask],
             marker = dict(color = 'DimGray', line = dict(color = 'Black', width=1.5)),
             name = 'Fatalities'
     ))
@@ -202,8 +261,8 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU'):
         # daily recoveries
         fig.add_trace(
             plotly.graph_objects.Bar(
-                x = date_time,
-                y = recov_d,
+                x = date_time[mask],
+                y = recov_d[mask],
                 marker = dict(color = 'DarkSeaGreen', line = dict(color = 'ForestGreen', width=1.5)),
                 name = 'Recoveries'
         ))
