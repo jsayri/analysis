@@ -3,12 +3,33 @@
 import pandas as pd
 import numpy as np
 import re
+import math
 
 from covid19_analysis import __version__
 
 __author__ = "J SAYRITUPAC"
 __copyright__ = "J SAYRITUPAC"
 __license__ = "mit"
+
+# Calculate the population over time for a given double time magnitude
+def doubling_time_fun(pop_init, num_days, grow_rate, t0=0):
+    '''Doubling time calculation, generate an array with the double time value following the next equation: 
+        P(t)=P0 * e^(t*ln(2)/T), with T=growing rate        
+        pop_init:   <int> initial population
+        num_days:   <int> number of days to plot
+        grow_rate:   <int> growing ratio in days
+        t0:   <int> time shift for growing calculation (NOT IMPLEMENTED YET)
+        
+        Reference
+            [1] https://en.wikipedia.org/wiki/Exponential_growth
+            [2] https://mathinsight.org/doubling_time_half_life_discrete
+            [3] http://sites.science.oregonstate.edu/~landaur/INSTANCES/WebModules/2_DecayGrowth/BiologicalGrowth/Pdfs/StudentReadings.pdf
+        '''
+    ndays =  np.array(range(0, num_days))
+    # doubling eq. as P(t)=P0 * e^(t*ln(2)/T), with T=growing rate
+    new_pop = np.ceil(pop_init * math.e ** (ndays * np.log(2) / grow_rate))
+    return new_pop
+
 
 # Provide a timeseries for a define country from JHU dataset
 def get_timeseries_from_JHU(df_jhu, country_name, mainland = True):

@@ -7,7 +7,7 @@ import datetime
 
 # import local functions
 import covid19_analysis.dataFun as dataFun
-
+#import covid19_analysis.dataPlot as dataPlot
 
 
 from covid19_analysis import __version__
@@ -15,6 +15,109 @@ from covid19_analysis import __version__
 __author__ = "J SAYRITUPAC"
 __copyright__ = "J SAYRITUPAC"
 __license__ = "mit"
+
+
+# Plot countries growing ratio and doubling time chars
+def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37):
+    '''Display countries cases over time compare to standards doubling-time ratios
+        df_data:    <dataframe> contain all countries daily data
+        ctry_list:  <list> string list with countries to display
+        pop_th:     <int> population threshold, allows to set chart starting point
+        num_days:   <int> set the number of days to display
+        
+    Graph inspired on the work or Lisa Charlotte ROST, designer & blogger at Datawrapper (March 2020)
+    https://lisacharlotterost.de/
+    Original graph from Lisa https://www.datawrapper.de/_/w6x6z/ 
+    '''
+
+    # build growing rates template
+    fig_gr = doublingtime_chart(pop_th, num_days)
+
+    # Extract timeseries & add trace to figure
+    for country_name in ctry_list:    
+        ts_country = dataFun.get_timeseries_from_JHU(df_data, country_name)
+
+        fig_gr.add_trace(
+        plotly.graph_objects.Scatter(
+            mode = 'lines',
+            #mode = 'lines+markers',
+            x = np.array(range(0, ts_country[ts_country > pop_th*.5].size)),
+            y = ts_country[ts_country > pop_th*.5],
+            name = country_name
+        ))
+    
+    # set graph extra details
+    fig_gr.update_layout(
+        title = 'Doubling rates per country' + datetime.datetime.today().strftime(', %B %d, %Y'),
+        title_x = .5
+    )
+
+    fig_gr.show()
+
+
+# Explore the growing rate over time (call chart growing rate countries)
+def doublingtime_chart(pop_th=100, num_days=37):
+    '''Build a doubling time chart template
+        pop_th:     <int> population threshold, identify min days per contry and set the chart starting point
+        num_days:   <int> set the number of days to display
+        
+    Graph inspired on Lisa Charlotte ROST work https://www.datawrapper.de/_/w6x6z/ 
+    '''
+    
+    # define some working variables
+    ndays = np.array(range(0, num_days))
+    symbols_list = ['circle', 'square', 'diamond', 'triangle_up', 'cross', 'x', 'asterisk', 'hash']
+    gr_array = [1, 2, 5, 7, 30]
+    gr_labels = ['daily', 'two days', 'five days', 'weekly', 'monthly']
+    
+    # build a chart template (growing ratios references)
+    fig = plotly.graph_objs.Figure()
+    for gr_idx, gr_value in enumerate(gr_array):
+        # calculate references growing rates
+        ncase = dataFun.doubling_time_fun(pop_th, num_days, gr_value)
+
+        # add a growing rate
+        fig.add_trace(
+            plotly.graph_objs.Scatter(
+                #mode = 'lines+markers',
+                mode = 'lines',
+                name = gr_labels[gr_idx],
+                x = ndays,
+                y = ncase,
+                marker_symbol = 100+2*gr_idx, #select 'open' symbols
+                line=dict(color='DarkGray', width = 1.5, dash = 'dashdot'),
+                #visible = 'legendonly'
+                showlegend=False,
+                hoverinfo='skip'
+        ))
+    
+    # anotation style
+    annotation_style=dict(size=10, color='DimGray')
+    # Text for daily grow
+    fig.add_annotation(x = 9, y = 4.7, text = 'Doubles every day', font = annotation_style, arrowcolor='DimGray')
+    # Text for 2 days grow
+    fig.add_annotation(x = 19, y = 4.85, text = 'Doubles every 2nd day', font = annotation_style, arrowcolor='DimGray')
+    # Text for 5 days grow
+    fig.add_annotation(x = 31, y = 3.86, text = 'Doubles every 5th day', font = annotation_style, arrowcolor='DimGray')
+    # Text for weekly grow
+    fig.add_annotation(x = 33, y = 3.41, text = 'Doubles every week', font = annotation_style, arrowcolor='DimGray')
+    # Text for monthly grow
+    fig.add_annotation(x = 35, y = 2.40, text = 'Doubles every month', font = annotation_style, arrowcolor='DimGray')
+
+    
+    # set chart style and names
+    fig.update_yaxes(range=[2, 5.5])
+    fig.update_xaxes(range=[0, num_days])
+    fig.update_layout(
+        yaxis_type="log",
+        plot_bgcolor='white', 
+        xaxis_title = 'Days',
+        yaxis_title = 'Number of cases <br> <sub>Log axe</sub>',
+    )
+    fig.update_yaxes(showgrid=True, gridwidth=.3, gridcolor='gainsboro')
+    #fig.show()
+    return fig
+
 
 # Countries comparison
 def disp_countries_comp(df_data, ctry_list, mask=0, plot_type='line'):
@@ -189,7 +292,7 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU', mask=0):
         '''
     if df_source == 'SPF':
         # time vector
-        date_time = df_data.date
+        date_time = pd.DataFrame(index=df_data.date).index
 
         # Daily cases
         data_tmp = np.array(df_data.cas_confirmes, dtype=int)
