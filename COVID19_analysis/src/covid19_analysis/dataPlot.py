@@ -67,8 +67,8 @@ def doublingtime_chart(pop_th=100, num_days=37):
     # define some working variables
     ndays = np.array(range(0, num_days))
     symbols_list = ['circle', 'square', 'diamond', 'triangle_up', 'cross', 'x', 'asterisk', 'hash']
-    gr_array = [1, 2, 5, 7, 30]
-    gr_labels = ['daily', 'two days', 'five days', 'weekly', 'monthly']
+    gr_array = [1, 2, 3, 5, 7, 30]
+    gr_labels = ['daily', 'two days', 'three days', 'five days', 'weekly', 'monthly']
     
     # build a chart template (growing ratios references)
     fig = plotly.graph_objs.Figure()
@@ -97,6 +97,8 @@ def doublingtime_chart(pop_th=100, num_days=37):
     fig.add_annotation(x = 9, y = 4.7, text = 'Doubles every day', font = annotation_style, arrowcolor='DimGray')
     # Text for 2 days grow
     fig.add_annotation(x = 19, y = 4.85, text = 'Doubles every 2nd day', font = annotation_style, arrowcolor='DimGray')
+    # Text for 3 days grow
+    fig.add_annotation(x = 29, y = 4.90, text = 'Doubles every 3rd day', font = annotation_style, arrowcolor='DimGray')
     # Text for 5 days grow
     fig.add_annotation(x = 31, y = 3.86, text = 'Doubles every 5th day', font = annotation_style, arrowcolor='DimGray')
     # Text for weekly grow
