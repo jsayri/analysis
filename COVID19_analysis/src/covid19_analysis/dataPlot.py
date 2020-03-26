@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import plotly
 import datetime
+import math
 
 # import local functions
 import covid19_analysis.dataFun as dataFun
@@ -18,12 +19,13 @@ __license__ = "mit"
 
 
 # Plot countries growing ratio and doubling time chars
-def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37):
+def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37, df_source='JHU'):
     '''Display countries cases over time compare to standards doubling-time ratios
         df_data:    <dataframe> contain all countries daily data
         ctry_list:  <list> string list with countries to display
         pop_th:     <int> population threshold, allows to set chart starting point
         num_days:   <int> set the number of days to display
+        df_source:  <str> set the type of dataframe data source, Jhon Hopkins by default
         
     Graph inspired on the work or Lisa Charlotte ROST, designer & blogger at Datawrapper (March 2020)
     https://lisacharlotterost.de/
@@ -34,23 +36,55 @@ def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37):
     fig_gr = doublingtime_chart(pop_th, num_days)
 
     # Extract timeseries & add trace to figure
-    for country_name in ctry_list:    
-        ts_country = dataFun.get_timeseries_from_JHU(df_data, country_name)
+    if df_source == 'JHU':
+        for country_name in ctry_list:    
+            ts_country = dataFun.get_timeseries_from_JHU(df_data, country_name)
 
+            fig_gr.add_trace(
+            plotly.graph_objects.Scatter(
+                mode = 'lines',
+                #mode = 'lines+markers',
+                x = np.array(range(0, ts_country[ts_country > pop_th*.5].size)),
+                y = ts_country[ts_country > pop_th*.5],
+                name = country_name
+            ))
+
+        # set graph extra details
+        fig_gr.update_layout(
+            title = 'Doubling rates per country' + datetime.datetime.today().strftime(', %B %d, %Y'),
+            title_x = .5
+        )
+
+    elif df_source == 'SPF':
+        ts_cases = pd.Series(data=df_data.cas_confirmes.fillna(0).values, index=df_data.date)
+        ts_ftlts = pd.Series(data=df_data.deces.fillna(0).values, index=df_data.date)
+        t_idx = ts_cases > pop_th
+        # trace french cases
         fig_gr.add_trace(
-        plotly.graph_objects.Scatter(
-            mode = 'lines',
-            #mode = 'lines+markers',
-            x = np.array(range(0, ts_country[ts_country > pop_th*.5].size)),
-            y = ts_country[ts_country > pop_th*.5],
-            name = country_name
-        ))
-    
-    # set graph extra details
-    fig_gr.update_layout(
-        title = 'Doubling rates per country' + datetime.datetime.today().strftime(', %B %d, %Y'),
-        title_x = .5
-    )
+            plotly.graph_objects.Scatter(
+                #mode = 'lines',
+                mode = 'lines+markers',
+                x = np.array(range(0, ts_cases[t_idx].size)),
+                y = ts_cases[t_idx],
+                name = 'Cases',
+                line=dict(color='CornflowerBlue'),
+                #marker=dict(color='CornflowerBlue')
+            ))
+        # trace french fatalities
+        fig_gr.add_trace(
+            plotly.graph_objects.Scatter(
+                #mode = 'lines',
+                mode = 'lines+markers',
+                x = np.array(range(0, ts_ftlts[t_idx].size)),
+                y = ts_ftlts[t_idx],
+                name = 'Fatalities',
+                line=dict(color='Black'),
+            ))
+        # set graph extra details
+        fig_gr.update_layout(
+            title = 'Doubling rates in France' + datetime.datetime.today().strftime(', %B %d, %Y'),
+            title_x = .5
+        )
 
     fig_gr.show()
 
@@ -94,21 +128,27 @@ def doublingtime_chart(pop_th=100, num_days=37):
     # anotation style
     annotation_style=dict(size=10, color='DimGray')
     # Text for daily grow
-    fig.add_annotation(x = 9, y = 4.7, text = 'Doubles every day', font = annotation_style, arrowcolor='DimGray')
+    fig.add_annotation(x = 9, y = math.log10(dataFun.doubling_time_equation(pop_th, 9, 1)),
+                        text = 'Doubles every day', font = annotation_style, arrowcolor='DimGray')
     # Text for 2 days grow
-    fig.add_annotation(x = 19, y = 4.85, text = 'Doubles every 2nd day', font = annotation_style, arrowcolor='DimGray')
+    fig.add_annotation(x = 19, y = math.log10(dataFun.doubling_time_equation(pop_th, 19, 2)),
+                        text = 'Doubles every 2nd day', font = annotation_style, arrowcolor='DimGray')
     # Text for 3 days grow
-    fig.add_annotation(x = 29, y = 4.90, text = 'Doubles every 3rd day', font = annotation_style, arrowcolor='DimGray')
+    fig.add_annotation(x = 29, y = math.log10(dataFun.doubling_time_equation(pop_th, 29, 3)),
+                        text = 'Doubles every 3rd day', font = annotation_style, arrowcolor='DimGray')
     # Text for 5 days grow
-    fig.add_annotation(x = 31, y = 3.86, text = 'Doubles every 5th day', font = annotation_style, arrowcolor='DimGray')
+    fig.add_annotation(x = 31, y = math.log10(dataFun.doubling_time_equation(pop_th, 31, 5)),
+                        text = 'Doubles every 5th day', font = annotation_style, arrowcolor='DimGray')
     # Text for weekly grow
-    fig.add_annotation(x = 33, y = 3.41, text = 'Doubles every week', font = annotation_style, arrowcolor='DimGray')
+    fig.add_annotation(x = 33, y = math.log10(dataFun.doubling_time_equation(pop_th, 33, 7)), 
+                        text = 'Doubles every week', font = annotation_style, arrowcolor='DimGray')
     # Text for monthly grow
-    fig.add_annotation(x = 35, y = 2.40, text = 'Doubles every month', font = annotation_style, arrowcolor='DimGray')
+    fig.add_annotation(x = 35, y = math.log10(dataFun.doubling_time_equation(pop_th, 35, 30)),
+                        text = 'Doubles every month', font = annotation_style, arrowcolor='DimGray')
 
     
     # set chart style and names
-    fig.update_yaxes(range=[2, 5.5])
+    fig.update_yaxes(range=[math.log10(pop_th), math.log10(pop_th)+3.5])
     fig.update_xaxes(range=[0, num_days])
     fig.update_layout(
         yaxis_type="log",

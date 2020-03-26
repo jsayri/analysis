@@ -13,23 +13,36 @@ __license__ = "mit"
 
 # Calculate the population over time for a given double time magnitude
 def doubling_time_fun(pop_init, num_days, grow_rate, t0=0):
-    '''Doubling time calculation, generate an array with the double time value following the next equation: 
+    '''Doubling time calculation, generate an array with the double time value which follows: 
         P(t)=P0 * e^(t*ln(2)/T), with T=growing rate        
         pop_init:   <int> initial population
         num_days:   <int> number of days to plot
-        grow_rate:   <int> growing ratio in days
-        t0:   <int> time shift for growing calculation (NOT IMPLEMENTED YET)
+        grow_rate:  <int> growing ratio in days
+        t0:         <int> time shift for growing calculation (NOT IMPLEMENTED YET)
+        '''
+    ndays =  np.array(range(0, num_days))
+    new_pop = doubling_time_equation(pop_init, ndays,grow_rate)
+    return new_pop
+
+# Define doubling time equation
+def doubling_time_equation(pop_init, num_day, grow_rate):
+    '''Define the equation for doubling time calculation: 
+        P(t)=P0 * e^(t*ln(2)/T), with T=growing rate        
+        pop_init:   <int> initial population
+        num_days:   <int> number of days past t0
+        grow_rate:  <int> growing ratio in days
         
         Reference
             [1] https://en.wikipedia.org/wiki/Exponential_growth
             [2] https://mathinsight.org/doubling_time_half_life_discrete
             [3] http://sites.science.oregonstate.edu/~landaur/INSTANCES/WebModules/2_DecayGrowth/BiologicalGrowth/Pdfs/StudentReadings.pdf
         '''
-    ndays =  np.array(range(0, num_days))
     # doubling eq. as P(t)=P0 * e^(t*ln(2)/T), with T=growing rate
-    new_pop = np.ceil(pop_init * math.e ** (ndays * np.log(2) / grow_rate))
+    if type(num_day) == int:
+        new_pop = np.ceil(pop_init * math.e ** (num_day * np.log(2) / grow_rate))
+    else:
+        new_pop = np.ceil(pop_init * math.e ** (np.array(num_day) * np.log(2) / grow_rate))
     return new_pop
-
 
 # Provide a timeseries for a define country from JHU dataset
 def get_timeseries_from_JHU(df_jhu, country_name, mainland = True):
@@ -51,10 +64,10 @@ def get_timeseries_from_JHU(df_jhu, country_name, mainland = True):
         
         # check if exist more than one Province/Region
         if list_province.size > 1:
-            print('Warning: %s has many Province/State' %(country_name))
-            if any(list_province == country_name):
-                print('Warning: Only mainland was taken')
-                df_out = df_jhu.loc[(df_jhu['Country/Region'] == country_name) & (df_jhu['Province/State'] == country_name)]
+            print('Warning: %s has several Province/State' %(country_name))
+            if any(pd.isna(list_province)):
+                print('Warning: Only mainland was taken for %s' %(country_name))
+                df_out = df_jhu.loc[(df_jhu['Country/Region'] == country_name) & (pd.isna(df_jhu['Province/State']))]
             
             else:
                 print('Warning: data for %s is the sum of all Provice/State' %(country_name))
