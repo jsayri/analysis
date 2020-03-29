@@ -41,7 +41,7 @@ def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37, df_sour
             ts_country = dataFun.get_timeseries_from_JHU(df_data, country_name)
 
             fig_gr.add_trace(
-            plotly.graph_objects.Scatter(
+            plotly.graph_objs.Scatter(
                 mode = 'lines',
                 #mode = 'lines+markers',
                 x = np.array(range(0, ts_country[ts_country > pop_th*.5].size)),
@@ -61,7 +61,7 @@ def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37, df_sour
         t_idx = ts_cases > pop_th
         # trace french cases
         fig_gr.add_trace(
-            plotly.graph_objects.Scatter(
+            plotly.graph_objs.Scatter(
                 #mode = 'lines',
                 mode = 'lines+markers',
                 x = np.array(range(0, ts_cases[t_idx].size)),
@@ -72,7 +72,7 @@ def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37, df_sour
             ))
         # trace french fatalities
         fig_gr.add_trace(
-            plotly.graph_objects.Scatter(
+            plotly.graph_objs.Scatter(
                 #mode = 'lines',
                 mode = 'lines+markers',
                 x = np.array(range(0, ts_ftlts[t_idx].size)),
@@ -170,7 +170,7 @@ def disp_countries_comp(df_data, ctry_list, mask=0, plot_type='line'):
         plot_type:  TO BE DONE LATER
 
     '''
-    fig = plotly.graph_objects.Figure()
+    fig = plotly.graph_objs.Figure()
 
     for country in ctry_list:
         # get country timeseries
@@ -182,7 +182,7 @@ def disp_countries_comp(df_data, ctry_list, mask=0, plot_type='line'):
 
         if plot_type == 'Bar':
             fig.add_trace(
-                plotly.graph_objects.Bar(
+                plotly.graph_objs.Bar(
                     x = ctry_ts.index[mask],
                     y = ctry_ts[mask], 
                     name = country
@@ -190,7 +190,7 @@ def disp_countries_comp(df_data, ctry_list, mask=0, plot_type='line'):
 
         elif plot_type == 'line':
             fig.add_trace(
-                plotly.graph_objects.Scatter(
+                plotly.graph_objs.Scatter(
                     mode = 'lines+markers',
                     x = ctry_ts.index[mask],
                     y = ctry_ts[mask], 
@@ -201,7 +201,7 @@ def disp_countries_comp(df_data, ctry_list, mask=0, plot_type='line'):
     fig.update_layout(
         xaxis_title = 'Time [Days]',
         yaxis_title = 'Cases',
-        title = 'COVID-19 cases per country',
+        title = 'COVID-19 cases per country' + datetime.datetime.today().strftime(', %B %d, %Y'),
         title_x = 0.5,
         plot_bgcolor='white', 
         yaxis_type="log"
@@ -278,10 +278,10 @@ def disp_cum_jhu(ts_case, ts_recov, ts_death, loc_name, mask=0):
         mask = ts_case.index >= ts_case.index[0]
 
     # Build plot for basic data display
-    fig = plotly.graph_objects.Figure()
+    fig = plotly.graph_objs.Figure()
     # diagnosed cases
     fig.add_trace(
-        plotly.graph_objects.Scatter(
+        plotly.graph_objs.Scatter(
             mode='lines+markers',
             x=ts_case.index[mask], 
             y=ts_case[mask],  
@@ -290,7 +290,7 @@ def disp_cum_jhu(ts_case, ts_recov, ts_death, loc_name, mask=0):
     ))
     # recover cases
     fig.add_trace(
-        plotly.graph_objects.Scatter(
+        plotly.graph_objs.Scatter(
             mode='lines+markers',
             x=ts_recov.index[mask], 
             y=ts_recov[mask],
@@ -299,7 +299,7 @@ def disp_cum_jhu(ts_case, ts_recov, ts_death, loc_name, mask=0):
     ))
     # death cases
     fig.add_trace(
-        plotly.graph_objects.Scatter(
+        plotly.graph_objs.Scatter(
             mode='lines+markers',
             x=ts_death.index[mask], 
             y=ts_death[mask],  
@@ -340,13 +340,13 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU', mask=0):
         data_tmp = np.array(df_data.cas_confirmes, dtype=int)
         data_tmp[data_tmp<0] = 0
         cases_d = data_tmp[1:]-data_tmp[:data_tmp.size-1]
-        cases_d = np.insert(cases_d, 0, data_tmp[0])
+        cases_d = np.insert(cases_d, 0, data_tmp[0]).clip(min=0)
 
         # daily fatalities
         data_tmp = np.array(df_data.deces, dtype=int)
         data_tmp[data_tmp<0] = 0
         death_d = data_tmp[1:]-data_tmp[:data_tmp.size-1]
-        death_d = np.insert(death_d, 0, data_tmp[0])
+        death_d = np.insert(death_d, 0, data_tmp[0]).clip(min=0)
 
         # daily recov
         recov_d = 0
@@ -382,11 +382,11 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU', mask=0):
         mask = date_time >= date_time[0]
 
     # Build plot for daily variation
-    fig = plotly.graph_objects.Figure()
+    fig = plotly.graph_objs.Figure()
 
     # daily cases
     fig.add_trace(
-        plotly.graph_objects.Bar(
+        plotly.graph_objs.Bar(
             x = date_time[mask],
             y = cases_d[mask],
             marker = dict(color = 'CornflowerBlue', line = dict(color = 'DarkBlue', width=1.5)),
@@ -395,7 +395,7 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU', mask=0):
 
     # daily fatalities
     fig.add_trace(
-        plotly.graph_objects.Bar(
+        plotly.graph_objs.Bar(
             x = date_time[mask],
             y = death_d[mask],
             marker = dict(color = 'DimGray', line = dict(color = 'Black', width=1.5)),
@@ -405,7 +405,7 @@ def disp_daily_cases(df_data, loc_name, df_source='JHU', mask=0):
     if df_source is 'JHU': # exclude SPF
         # daily recoveries
         fig.add_trace(
-            plotly.graph_objects.Bar(
+            plotly.graph_objs.Bar(
                 x = date_time[mask],
                 y = recov_d[mask],
                 marker = dict(color = 'DarkSeaGreen', line = dict(color = 'ForestGreen', width=1.5)),
@@ -439,10 +439,10 @@ def disp_current_cases(df_data, loc_name, pop_factor=1):
     liv_c = np.array(df_data.cas_confirmes, dtype=int) - fat_c
     
     # Build plot for basic data display
-    fig = plotly.graph_objects.Figure()
+    fig = plotly.graph_objs.Figure()
     # Confirmed cases
     fig.add_trace(
-        plotly.graph_objects.Bar(
+        plotly.graph_objs.Bar(
             x=df_data.date, 
             y=liv_c / pop_factor,  
             name = 'On going cases',
@@ -450,7 +450,7 @@ def disp_current_cases(df_data, loc_name, pop_factor=1):
     ))
     # Fatalities
     fig.add_trace(
-        plotly.graph_objects.Bar(
+        plotly.graph_objs.Bar(
             x=df_data.date, 
             y=fat_c / pop_factor, 
             name = 'Fatalities',
@@ -485,10 +485,10 @@ def disp_cumulative(df_data, loc_name, pop_factor=1):
                         vertical axis the multiplicative magnitude
         
         '''
-    fig = plotly.graph_objects.Figure()
+    fig = plotly.graph_objs.Figure()
     # add scatter chart for confirmed cases
     fig.add_trace(
-        plotly.graph_objects.Scatter(
+        plotly.graph_objs.Scatter(
             mode = 'lines+markers',
             x=df_data.date, 
             y=np.array(df_data.cas_confirmes, dtype=int),  
@@ -497,7 +497,7 @@ def disp_cumulative(df_data, loc_name, pop_factor=1):
     ))
     # add scatter chart for fatalities
     fig.add_trace(
-        plotly.graph_objects.Scatter(
+        plotly.graph_objs.Scatter(
             mode='lines+markers',
             x=df_data.date, 
             y=np.array(df_data.deces, dtype=int), 
