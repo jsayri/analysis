@@ -18,6 +18,37 @@ __copyright__ = "J SAYRITUPAC"
 __license__ = "mit"
 
 
+# Report growth rates over time
+def growth_rates(data_ts, label = 'Cases'):
+    '''Display growth rates over time for cases/cures/fatalities for one dataset array'''
+    # calculate growth rates
+    data_tmp = np.array(data_ts, dtype=int)
+    growth_ratio = dataFun.safe_div(data_tmp[1:], data_tmp[:-1])
+    time_vector = data_ts.index
+
+    # display growth ratio over time
+    fig = plotly.graph_objs.Figure()
+    fig.add_trace(
+        plotly.graph_objs.Scatter(
+            mode = 'lines+markers',
+            x = time_vector[1:],
+            y = growth_ratio,
+            marker = dict(color = 'Black', line = dict(color = 'DarkGrey', width=1.5)),
+        ))
+
+    fig.update_layout(
+        plot_bgcolor='white', 
+        xaxis_title = 'Time [Days]',
+        yaxis_title = 'Infection growth ratio',
+        title = label + 'growth ratio' + datetime.datetime.today().strftime(', %B %d, %Y'),
+        title_x = .5
+        )
+    fig.update_yaxes(showgrid=True, gridwidth=.3, gridcolor='gainsboro')
+
+    fig.show()
+    return fig
+
+
 # Plot countries growing ratio and doubling time chars
 def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37, df_source='JHU'):
     '''Display countries cases over time compare to standards doubling-time ratios
@@ -25,7 +56,7 @@ def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37, df_sour
         ctry_list:  <list> string list with countries to display
         pop_th:     <int> population threshold, allows to set chart starting point
         num_days:   <int> set the number of days to display
-        df_source:  <str> set the type of dataframe data source, Jhon Hopkins by default
+        df_source:  <str> set the dataframe data source, options are: 'JHU' (default), 'SPF', 'raw_data'
         
     Graph inspired on the work or Lisa Charlotte ROST, designer & blogger at Datawrapper (March 2020)
     https://lisacharlotterost.de/
@@ -54,6 +85,20 @@ def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37, df_sour
             title = 'Doubling rates per country' + datetime.datetime.today().strftime(', %B %d, %Y'),
             title_x = .5
         )
+
+    # Display simple data overtime
+    elif df_source == 'raw_data':
+        data_flt = df_data > pop_th
+
+        fig_gr.add_trace(
+            plotly.graph_objs.Scatter(
+                mode = 'lines',
+                #mode = 'lines+markers',
+                x = np.array(range(0, len(data_flt))),
+                y = df_data[data_flt],
+                name = ctry_list,
+                line = dict(color = 'Black')
+            ))
 
     elif df_source == 'SPF':
         ts_cases = pd.Series(data=df_data.cas_confirmes.fillna(0).values, index=df_data.date)

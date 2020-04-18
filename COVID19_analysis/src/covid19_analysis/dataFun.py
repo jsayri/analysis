@@ -120,7 +120,9 @@ def select_country(df_all, country_name, just_mainland = True):
 
 # Define a division for two vectors (array dim 1) when the divisor has zero
 def safe_div(x,y):
-    ''' Calculate a division between two vector on which the divisor have a zero value. The final result will have zero as well'''
+    ''' Calculate a division between two vector on which the divisor have a zero value. The final result will have zero as well:
+        z = x / y
+        '''
     isZero = (y == 0)
     y2 = np.array(y)
     y2[isZero] = 1
