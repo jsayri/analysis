@@ -18,6 +18,57 @@ __copyright__ = "J SAYRITUPAC"
 __license__ = "mit"
 
 
+# Report daily cases evolution for last three months
+def last_daily_cases(df_data, ctry_list, num_days=3*31, rolling_win=True, df_type='cases'):
+    '''Display countries last days daily cases trend
+        df_data:    <dataframe> contain all countries daily data
+        ctry_list:  <list> string list with countries to display
+        num_days:   <int> set the number of days to display rolling back from the last day
+        rolling_win:<boolean> set weakly rolling window with center on the day
+        df_type:    <string> define the type of data displayed, optiones are 'cases', 'recover' & 'fatalities'
+    '''
+
+    # define graph object
+    fig = plotly.graph_objs.Figure()
+
+    # Loop per country, display daily evolution for last three months
+    for c in ctry_list:
+        ts_c = dataFun.get_timeseries_from_JHU(df_data, c, verbose=False)
+        
+        # calculate daily cases (set to 0 if no cases)
+        data_temp = np.array(ts_c[1:], dtype=int)  - np.array(ts_c[:-1], dtype=int)
+        ts_c_daily = pd.Series(data_temp, index=ts_c.index[1:]).clip(0)
+        
+        if rolling_win:
+            # moving average, 7 days centered in day
+            ts_c_daily = ts_c_daily.rolling(7, min_periods=1, center=True).sum()
+        
+
+        # Plot graph for a define time interval
+        mask = (ts_c_daily.index >= (ts_c_daily.index[-1] - pd.Timedelta(num_days, unit='days')))
+        
+        fig.add_trace(
+            plotly.graph_objs.Scatter(
+                mode = 'lines',
+                name = c,
+                x = ts_c_daily.index[mask],
+                y = ts_c_daily[mask],
+                line=dict(width = 1.5),
+            )
+        )
+
+    fig.update_layout(
+        plot_bgcolor='white', 
+        xaxis_title = 'Dates [Days]',
+        yaxis_title = 'Daily ' + df_type,
+        title = 'Lasts month '+ df_type + ' evolution' + datetime.datetime.today().strftime(', %B %d, %Y'),
+        title_x = .5
+    )
+
+    fig.update_yaxes(showgrid=True, gridwidth=.3, gridcolor='gainsboro')
+    fig.show()
+
+
 # Report growth rates over time
 def growth_rates(data_ts, label = 'Cases'):
     '''Display growth rates over time for cases/cures/fatalities for one dataset array'''
@@ -50,13 +101,15 @@ def growth_rates(data_ts, label = 'Cases'):
 
 
 # Plot countries growing ratio and doubling time chars
-def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37, df_source='JHU'):
+def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37, df_source='JHU', day_filter = np.nan, clear_pop = False ):
     '''Display countries cases over time compare to standards doubling-time ratios
         df_data:    <dataframe> contain all countries daily data
         ctry_list:  <list> string list with countries to display
         pop_th:     <int> population threshold, allows to set chart starting point
         num_days:   <int> set the number of days to display
         df_source:  <str> set the dataframe data source, options are: 'JHU' (default), 'SPF', 'raw_data'
+        day_filter: <str> define a date string as a time filter, no filter as default
+        clear_pop:  <bool> substract population from first day, useful if counting from a different day from first outbreak
         
     Graph inspired on the work or Lisa Charlotte ROST, designer & blogger at Datawrapper (March 2020)
     https://lisacharlotterost.de/
@@ -70,6 +123,14 @@ def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37, df_sour
     if df_source == 'JHU':
         for country_name in ctry_list:    
             ts_country = dataFun.get_timeseries_from_JHU(df_data, country_name)
+
+            # post first-outbreak filters
+            if not pd.isna(day_filter):    # a time filter is included
+                ts_country = ts_country[ts_country.index >= day_filter]
+
+                if clear_pop:   # substract first date population
+                    ts_country = ts_country - ts_country[0]
+
 
             fig_gr.add_trace(
             plotly.graph_objs.Scatter(
@@ -103,6 +164,17 @@ def growing_ratio_countries(df_data, ctry_list, pop_th=100, num_days=37, df_sour
     elif df_source == 'SPF':
         ts_cases = pd.Series(data=df_data.cas_confirmes.fillna(0).values, index=df_data.date)
         ts_ftlts = pd.Series(data=df_data.deces.fillna(0).values, index=df_data.date)
+        
+        # post first-outbreak filters
+        if not pd.isna(day_filter):    # a time filter is included
+                ts_cases[ts_cases.index >= day_filter]
+                ts_ftlts[ts_ftlts.index >= day_filter]
+
+                if clear_pop:   # substract first date population
+                    ts_cases = ts_cases - ts_country[0]
+                    ts_ftlts = ts_ftlts - ts_country[0]  
+
+
         t_idx = ts_cases > pop_th
         # trace french cases
         fig_gr.add_trace(

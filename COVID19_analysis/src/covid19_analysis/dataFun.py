@@ -45,11 +45,12 @@ def doubling_time_equation(pop_init, num_day, grow_rate):
     return new_pop
 
 # Provide a timeseries for a define country from JHU dataset
-def get_timeseries_from_JHU(df_jhu, country_name, mainland = True):
+def get_timeseries_from_JHU(df_jhu, country_name, mainland = True, verbose=True):
     '''Provide a timeseries for a define country from JHU dataset. 
         df_jhu:         <dataframe> Dataset read from JHU repository
         country_name:   <string> Name of the country within the JHU country list
         mainland:       <boolean> Allows to choose between have only mainland data or all places data, True by default
+        verbose:        <boolean> Display message for the user from data extraction
         '''
     if country_name is 'all':
         # Calculate the sum of all cases
@@ -64,13 +65,13 @@ def get_timeseries_from_JHU(df_jhu, country_name, mainland = True):
         
         # check if exist more than one Province/Region
         if list_province.size > 1:
-            print('Warning: %s has several Province/State' %(country_name))
+            if verbose: print('Warning: %s has several Province/State' %(country_name))
             if any(pd.isna(list_province)):
-                print('Warning: Only mainland was taken for %s' %(country_name))
+                if verbose: print('Warning: Only mainland was taken for %s' %(country_name))
                 df_out = df_jhu.loc[(df_jhu['Country/Region'] == country_name) & (pd.isna(df_jhu['Province/State']))]
             
             else:
-                print('Warning: data for %s is the sum of all Provice/State' %(country_name))
+                if verbose: print('Warning: data for %s is the sum of all Provice/State' %(country_name))
                 # calculate aggregate data
                 df_tmp = df_jhu.loc[df_jhu['Country/Region'] == country_name]
                 if country_name == 'US': # 'US' special case
