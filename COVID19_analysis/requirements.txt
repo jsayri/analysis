@@ -8,7 +8,7 @@ cffi==1.14.0
 chardet==3.0.4
 colorama==0.4.3
 -e git+https://github.com/jsayri/analysis.git@498e136e3aa382ce0f7b7b33726e1b922fcd6ea3#egg=COVID19_analysis&subdirectory=covid19_analysis
-cryptography==2.9.2
+cryptography==3.2
 cycler==0.10.0
 decorator==4.4.2
 defusedxml==0.6.0
